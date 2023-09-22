@@ -15,12 +15,17 @@ public class Solitaire : MonoBehaviour
 
     [SerializeField]
     GameObject[] topSlots;
-    List<string> [] topCards = new List<string> [4];
+    List<string>[] topCards = new List<string>[4].Select(item=>new List<string>()).ToArray();
 
     [SerializeField]
     GameObject[] bottomSlots;
-    List<string> [] bottomCards = new List<string> [7];
+    List<string>[] bottomCards = new List<string>[7].Select(item=>new List<string>()).ToArray();
 
+    [SerializeField]
+    float cardOffset_y = 0.2f;
+    [SerializeField]
+    float cardOffset_z = 0.02f;
+    
     string [] cards = new string [] {
         "CA", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10", "CJ", "CQ", "CK",
         "DA", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10", "DJ", "DQ", "DK",
@@ -39,9 +44,6 @@ public class Solitaire : MonoBehaviour
         
     }
 
-    void InitCards() {
-    }
-
     // Add cards to deck and shuffel
     void GenerateDeck() {
         foreach(string card in cards) {
@@ -51,22 +53,23 @@ public class Solitaire : MonoBehaviour
     }
 
     void DealCards() {
-        float y_offset = -.2f;
-        float z_offset = -.02f;
-        Vector3 position = new Vector3(transform.position.x, transform.position.y,transform.position.z);
-        foreach(string card in deck) {
-            position.y += y_offset;
-            position.z += z_offset;
-            GameObject newCard = Instantiate(cardPrefab, position, Quaternion.identity);
-            newCard.name = card;
-        }
-
         for(int i=0; i<bottomSlots.Count(); ++i) {
             for(int j=i; j<bottomSlots.Count(); ++j) {
-                GameObject newCard = Instantiate(cardPrefab, bottomSlots[j].transform.position , Quaternion.identity, bottomSlots[j].transform);
+                Vector3 position = new Vector3(bottomSlots[j].transform.position.x, 
+                                 bottomSlots[j].transform.position.y - cardOffset_y * i, 
+                                 bottomSlots[j].transform.position.z - cardOffset_z * i);
+                GameObject newCard = Instantiate(cardPrefab, position, Quaternion.identity, bottomSlots[j].transform);
                 newCard.name = deck[^1];
-                //bottomCards[j].Add(deck[^1]);
+                if(bottomCards[j] == null) {
+                    bottomCards[j] = new List<string>();
+                }
+                bottomCards[j].Add(deck[^1]);
                 deck.RemoveAt(deck.Count-1);
+
+                // If its the last card, make it face up  TODO: Clean this up
+                if (i == j) { 
+                    newCard.GetComponent<Selectable>().faceUp = true;
+                }
             }
         }
     }
