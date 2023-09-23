@@ -1,18 +1,43 @@
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
 
 public class UserInput : MonoBehaviour
 {
-    // Start is called before the first frame update
-    void Start()
-    {
-        
+    Solitaire solitaire;
+
+    void Start() {
+        solitaire = FindObjectOfType<Solitaire>();        
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
+    void Update() {
+        GetMouseClick();
+    }
+
+    void GetMouseClick() {
+        if (Input.GetMouseButtonDown(0)) {
+
+            Vector3 mousePostion = Camera.main.ScreenToWorldPoint(new Vector3(Input.mousePosition.x, Input.mousePosition.y, -10));
+            RaycastHit2D hit = Physics2D.Raycast(Camera.main.ScreenToWorldPoint(Input.mousePosition),Vector2.zero);
+
+            if(hit) {
+                if (hit.collider.CompareTag("Deck")) {
+                    DeckClick();
+                }
+                if (hit.collider.CompareTag("Card")) {
+                    CardClick();
+                }
+
+            }
+        }
+    }
+
+    void DeckClick() {
+        solitaire.CallShowCards();
+    }
+
+    void CardClick() {
+        Debug.Log("Card click!");
     }
 }
