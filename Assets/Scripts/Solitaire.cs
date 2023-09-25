@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Data;
 using System.Linq;
 using Unity.VisualScripting;
@@ -18,11 +19,11 @@ public class Solitaire : MonoBehaviour
 
     [SerializeField]
     GameObject[] topSlots;
-    List<string>[] topCards = new List<string>[4].Select(item=>new List<string>()).ToArray();
+    List<GameObject>[] topCards = new List<GameObject>[4].Select(item=>new List<GameObject>()).ToArray();
 
     [SerializeField]
     GameObject[] bottomSlots;
-    List<string>[] bottomCards = new List<string>[7].Select(item=>new List<string>()).ToArray();
+    List<GameObject>[] bottomCards = new List<GameObject>[7].Select(item=>new List<GameObject>()).ToArray();
 
     [SerializeField]
     GameObject deckButton;
@@ -47,9 +48,16 @@ public class Solitaire : MonoBehaviour
         "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9", "S10", "S11", "S12", "S13"
     };
 
-    public List<string> deck = new List<string>(); 
-    public List<string> show = new List<string>();
-    public List<string> discard = new List<string>();
+    public List<GameObject> deck = new List<GameObject>(); 
+    public List<GameObject> show = new List<GameObject>();
+    public List<GameObject> discard = new List<GameObject>();
+
+    Vector3 startPositionOffset = new Vector3(0,0,0.2f);
+    Vector3 showPositionOffset = new Vector3(1.5f,0,0);
+
+    Vector3 startPosition = new Vector3();
+    Vector3 showPosition = new Vector3();
+    
 
     void Start() {
         GenerateDeck();
@@ -62,32 +70,38 @@ public class Solitaire : MonoBehaviour
 
     // Add cards to deck and shuffel
     void GenerateDeck() {
-        foreach(string card in cards) {
-            deck.Add(card);
+        startPosition = deckButton.transform.position + startPositionOffset;
+        showPosition = deckButton.transform.position + showPositionOffset;
+        foreach(string name in cards) {
+            GameObject new_card = Instantiate(cardPrefab, startPosition, Quaternion.identity, deckButton.transform);
+            new_card.name = name;
+            deck.Add(new_card);
         }
         Shuffel(deck);
     }
 
     IEnumerator DealCards() {
-        for(int i=0; i<bottomSlots.Count(); ++i) {
-            for(int j=i; j<bottomSlots.Count(); ++j) {
-                yield return new WaitForSeconds(cardDealDelay);
-                Vector3 position = new Vector3(bottomSlots[j].transform.position.x, 
-                                 bottomSlots[j].transform.position.y - cardOffset_y * i, 
-                                 bottomSlots[j].transform.position.z - cardOffset_z * i);
-                GameObject newCard = Instantiate(cardPrefab, position, Quaternion.identity, bottomSlots[j].transform);
-                newCard.name = deck[^1];
-                if(bottomCards[j] == null) {
-                    bottomCards[j] = new List<string>();
-                }
-                bottomCards[j].Add(deck[^1]);
-                deck.RemoveAt(deck.Count-1);
+        // Iterate over bottomCards in a triangle pattern
+        for(int i=0; i<bottomCards.Count(); ++i) {
+            for(int j=i; j<bottomCards.Count(); ++j) {
+
+                // Get new position for card 
+                Vector3 new_position = bottomSlots[j].transform.position + new Vector3(0, -cardOffset_y * i, -cardOffset_z * i);
+
+                // Get next card from deck 
+                GameObject next_card = deck.Last();
+                deck.Remove(next_card);
+
+                // Move card to new position and assign to array
+                next_card.transform.position = new_position;
+                bottomCards[j].Add(next_card);
 
                 // If its the last card, make it face up  TODO: Clean this up
                 if (i == j) { 
-                    newCard.GetComponent<Selectable>().faceUp = true;
-                    newCard.GetComponent<Selectable>().selectable = true;
+                    next_card.GetComponent<Selectable>().faceUp = true;
+                    next_card.GetComponent<Selectable>().selectable = true;
                 }
+                yield return new WaitForSeconds(cardDealDelay);
             }
         }
     }
@@ -97,34 +111,41 @@ public class Solitaire : MonoBehaviour
     }
 
     public void CardClick(GameObject card) {
-        // If card 
         HandleCardClick(card);
     }
 
     bool isEmptyDeck = false;
     IEnumerator ShowCards () {
+
         // Remove any cards that are already showing 
-        foreach(string s in show) {
-            Destroy(GameObject.Find(s));
+        foreach(GameObject s in show) {
             discard.Add(s);
+            s.transform.position = startPosition;
+            s.GetComponent<Selectable>().selectable = false;
+            s.GetComponent<Selectable>().faceUp = false;
         }
         show.Clear();
 
         // Pull 'showNumCards' cards from deck and show them
         for(int i=0;i<showNumCards;++i) {
             if(deck.Count != 0) {
-                Vector3 position = new Vector3(deckButton.transform.position.x + 1.5f + cardOffset_x * i , 
-                                               deckButton.transform.position.y,  
-                                               deckButton.transform.position.z - cardOffset_z * i);
-                GameObject newCard = Instantiate(cardPrefab, position, Quaternion.identity, deckButton.transform);
-                newCard.name = deck[^1];
-                newCard.GetComponent<Selectable>().faceUp = true;
-                show.Add(deck[^1]);
-                deck.RemoveAt(deck.Count-1);
+                // Grab next card
+                Vector3 new_position = showPosition + new Vector3(cardOffset_x * i, 0, -cardOffset_z * i);
+                GameObject next_card = deck.Last();
+
+                // Remove it from deck and add to show 
+                deck.Remove(next_card);
+                show.Add(next_card);
+
+                // Move to new position
+                next_card.transform.position = new_position;
+
+                // Turn face up
+                next_card.GetComponent<Selectable>().faceUp = true;
 
                 // If its the top card set it as selectable 
                 if(deck.Count == 0 || i == showNumCards-1) {
-                    newCard.GetComponent<Selectable>().selectable = true;
+                    next_card.GetComponent<Selectable>().selectable = true;
                 }
 
                 // Delay
@@ -135,9 +156,8 @@ public class Solitaire : MonoBehaviour
         // If deck is empty wait one round then pull the discard pile back 
         if(isEmptyDeck) {
             discard.Reverse();
-            Debug.Log("Deck is empty");
-            foreach(string s in discard) {
-                deck.Add(s);
+            foreach(GameObject g in discard) {
+                deck.Add(g);
             }
             discard.Clear();
             isEmptyDeck = false;
@@ -153,10 +173,26 @@ public class Solitaire : MonoBehaviour
         return (s[0], int.Parse(s.Substring(1)));
     }
 
+    int GetBottomSlotIndex(GameObject card) {
+        // Return -1 if not in bottom slot and is not on top of deck
+        for(int i=0;i<bottomCards.Count();++i) {
+            for(int j=0; j<bottomCards[i].Count()-1; ++j){
+                if(bottomCards[i][j] == card){ return i; }
+            }
+            if(bottomCards[i].Last() == card) {
+                return -i;
+            }
+        }
+        return -99;
+    }
+
     void HandleCardClick(GameObject card) {
 
         // Only process clicks on selectable cards 
         if(card.GetComponent<Selectable>().selectable) {
+
+            // Get bottom slot index (if card is not in bottom slot then result will be -1)
+            int bottomSlotIndex = GetBottomSlotIndex(card);
 
             // Get suit and number
             (char card_suit, int card_number) = GetSuitAndNumber(card.name);
@@ -165,61 +201,90 @@ public class Solitaire : MonoBehaviour
             if(card_number == 1) {
                 // Check top slots
                 for(int i=0;i<topCards.Count();++i) {
+                    // If we have an empty slot    
                     if(topCards[i].Count == 0) {
-                        PurgeCard(card.name);
-                        topCards[i].Add(card.name);
-                        card.transform.position = topSlots[i].transform.position;
-                        card.transform.SetParent(topSlots[i].transform);
+                        // Remove card from prev list
+                        PurgeCard(card);
+                        // Add card to slot list
+                        topCards[i].Add(card);
+                        // Move card position to new one 
+                        card.transform.position = topSlots[i].transform.position + new Vector3(0,0,cardOffset_z);
                         return;
                     }
                 }
             } 
-            // Handle Kings
-            /*
-            else if(card_number == 13) {
 
-            }
-            */
-            // Handle All other cards
-            else {
-                // Hande top slots first
+            // Hande Remaining cards: check top slots
+            // Only check top slots if card is not buried in bottom slots
+            if(bottomSlotIndex < 0) {
                 for(int i=0;i<topCards.Count();++i) {
+                    // 
                     if(topCards[i].Count != 0) {
-                        (char suit, int number) = GetSuitAndNumber(topCards[i][^1]);
+                        (char suit, int number) = GetSuitAndNumber(topCards[i].Last().name);
                         // Check suit is same and card_number is one more 
                         if(card_suit == suit && card_number == number + 1){
-                            PurgeCard(card.name);
-                            topCards[i].Add(card.name);
+                            PurgeCard(card);
+                            topCards[i].Add(card);
                             card.transform.position = topSlots[i].transform.position;
-                            card.transform.SetParent(topSlots[i].transform);
+                            //card.transform.SetParent(topSlots[i].transform);
                             return;
                         }
                     }
                 }
-                // Handle bottom slots
-                for(int i=0;i<bottomCards.Count();++i) {
-                    if(bottomCards[i].Count !=0) {
-                        (char suit, int number) = GetSuitAndNumber(bottomCards[i][^1]);
-                        // Check suit is oposite color and card_number is one less
-                        if(     ((card_suit == 'C' || card_suit == 'S') && (suit == 'H' || suit == 'D'))
-                             || ((card_suit == 'H' || card_suit == 'D') && (suit == 'C' || suit == 'S'))) {
-                            if(card_number == number-1) {
-                                Debug.Log("card_number: " + card_number + " number: " + number);
-                                Debug.Log("card_suit: " + card_suit + " suit: " + suit);
-                                Debug.Log("BottomCard count: " + bottomCards.Count());
-                                Vector3 position = new Vector3(bottomSlots[i].transform.position.x,
-                                                            bottomSlots[i].transform.position.y - cardOffset_y * bottomCards[i].Count(),
-                                                            bottomSlots[i].transform.position.z - cardOffset_z * bottomCards[i].Count());
-                                PurgeCard(card.name);
-                                bottomCards[i].Add(card.name);
-                                card.transform.position = position;
-                                card.transform.SetParent(bottomSlots[i].transform);
-                                return;
+            }
+
+            // Handle Remaining cards: check bottom slots  
+            for(int i=0;i<bottomCards.Count();++i) {
+                if(bottomCards[i].Count !=0) {
+                    (char suit, int number) = GetSuitAndNumber(bottomCards[i].Last().name);
+                    // Check suit is oposite color and card_number is one less
+                    if(     (((card_suit == 'C' || card_suit == 'S') && (suit == 'H' || suit == 'D'))
+                            || ((card_suit == 'H' || card_suit == 'D') && (suit == 'C' || suit == 'S')))
+                            && (card_number == number-1)) {
+
+                        // log
+                        Debug.Log("card_number: " + card_number + " number: " + number);
+                        Debug.Log("card_suit: " + card_suit + " suit: " + suit);
+                        Debug.Log("BottomCard count: " + bottomCards.Count());
+
+                        //Vector3 new_position =  bottomSlots[i].transform.position + new Vector3(0, -cardOffset_y, -cardOffset_z) * bottomCards[i].Count;
+
+                        // Handle child cards 
+                        if(bottomSlotIndex != -99) {
+                            bottomSlotIndex = Math.Abs(bottomSlotIndex);
+                            bool found = false;
+                            foreach(GameObject check_card in bottomCards[bottomSlotIndex]) {
+                                if(found || check_card == card) { 
+                                    // Move object
+                                    Vector3 new_position =  bottomSlots[i].transform.position + new Vector3(0, -cardOffset_y, -cardOffset_z) * bottomCards[i].Count;
+                                    PurgeCard(check_card);
+                                    bottomCards[i].Add(check_card);
+                                    card.transform.position = new_position;
+                                    found = true;
+                                }
                             }
                         }
+
+                        //card.transform.SetParent(bottomSlots[i].transform);
+                        return;
                     }
                 }
-                Debug.Log("Selectable other card: " + card.name);
+            }
+
+            // Handle king posible move to blank space
+            if (card_number == 13) {
+                for(int i=0;i<bottomCards.Count();++i){
+                    if(bottomCards[i].Count == 0) {
+                        // Remove card from prev list
+                        PurgeCard(card);
+                        // Add card to slot list
+                        bottomCards[i].Add(card);
+                        // Move card position to new one 
+                        card.transform.position = bottomSlots[i].transform.position + new Vector3(0,0,cardOffset_z);
+                        return;
+                    }
+                }
+                
             }
 
         }
@@ -229,40 +294,37 @@ public class Solitaire : MonoBehaviour
             Debug.Log("Non selectable card: " + card.name);
             for(int i=0;i<bottomCards.Count();++i) {
                 // If the card is on top then set it to be face up
-                if(bottomCards[i][^1] == card.name) {
+                if(bottomCards[i].Last() == card) {
                     card.GetComponent<Selectable>().faceUp = true;
                     card.GetComponent<Selectable>().selectable = true;
+                    return;
                 }
             }
         }
     }
 
-    bool PurgeCard(string card_name) {
+    bool PurgeCard(GameObject card) {
         // Clear from top cards
-        foreach(List<string> t in topCards) {
-            foreach(string s in t) {
-                if(s == card_name) {
-                    t.Remove(s);
-                    return true;
-                }
+        foreach(List<GameObject> list in topCards) {
+            if(list.Remove(card)) {
+                return true;
             }
         }
         // Clear from bottom cards
-        foreach(List<string> b in bottomCards) {
-            foreach(string s in b) {
-                if(s == card_name) {
-                    b.Remove(s);
-                    return true;
-                }
+        foreach(List<GameObject> list in bottomCards) {
+            if(list.Remove(card)) {
+                return true;
             }
         }
         // Clear from shown cards
-        if(show[^1] == card_name) {
-            show.Remove(card_name);
-            return true;
+        for(int i=0;i<show.Count;++i){
+            if(card == show[i]){
+                if(i>0) { show[i-1].GetComponent<Selectable>().selectable = true; }
+                show.Remove(card);
+                return true;
+            }
         }
         // Return false if we did not find the card
-        Debug.Log("Failure puring card: " + card_name);
         return false;
     }
 
