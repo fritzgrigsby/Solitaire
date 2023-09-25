@@ -26,7 +26,7 @@ public class UserInput : MonoBehaviour
                     DeckClick();
                 }
                 if (hit.collider.CompareTag("Card")) {
-                    CardClick();
+                    CardClick(hit.collider.gameObject);
                 }
 
             }
@@ -37,7 +37,8 @@ public class UserInput : MonoBehaviour
         solitaire.CallShowCards();
     }
 
-    void CardClick() {
+    void CardClick(GameObject selected) {
+        solitaire.CardClick(selected);
         Debug.Log("Card click!");
     }
 }
