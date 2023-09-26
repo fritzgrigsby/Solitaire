@@ -28,7 +28,7 @@ public class UserInput : MonoBehaviour
                 if (hit.collider.CompareTag("Card")) {
                     CardClick(hit.collider.gameObject);
                 }
-
+                //solitaire.PrintCards();
             }
         }
     }
