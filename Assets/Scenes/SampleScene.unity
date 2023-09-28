@@ -1079,14 +1079,11 @@ MonoBehaviour:
   - {fileID: 1496837104}
   - {fileID: 14726974}
   deckButton: {fileID: 1016823272}
-  showCards: 3
+  showNumCards: 3
   cardOffset_x: 0.4
   cardOffset_y: 0.2
   cardOffset_z: 0.02
   cardDealDelay: 0.05
-  deck: []
-  show: []
-  discard: []
 --- !u!114 &1577797436
 MonoBehaviour:
   m_ObjectHideFlags: 0
