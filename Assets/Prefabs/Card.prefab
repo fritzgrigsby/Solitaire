@@ -10,10 +10,10 @@ GameObject:
   m_Component:
   - component: {fileID: 6570601517917148763}
   - component: {fileID: 7470401372684706522}
-  - component: {fileID: 6107934734081704010}
-  - component: {fileID: 8079911533120120215}
   - component: {fileID: 2672515615236044335}
   - component: {fileID: -3326555396146139523}
+  - component: {fileID: 6107934734081704010}
+  - component: {fileID: 8079911533120120215}
   m_Layer: 7
   m_Name: Card
   m_TagString: Card
@@ -88,32 +88,6 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
---- !u!114 &6107934734081704010
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3839812189252975949}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 10b84d6587968a34b93749d72fabe0b0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  cardBack: {fileID: 21300000, guid: e0f8e6bf54edf4a4db7669e81a31e42b, type: 3}
---- !u!114 &8079911533120120215
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3839812189252975949}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1f3b06b66c328c84f87a6f7dffb10b78, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  faceUp: 0
 --- !u!61 &2672515615236044335
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -186,3 +160,32 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 0
   m_Constraints: 0
+--- !u!114 &6107934734081704010
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3839812189252975949}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10b84d6587968a34b93749d72fabe0b0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  speed: 50
+  moveHeight: 2
+  cardBack: {fileID: 21300000, guid: e0f8e6bf54edf4a4db7669e81a31e42b, type: 3}
+--- !u!114 &8079911533120120215
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3839812189252975949}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1f3b06b66c328c84f87a6f7dffb10b78, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  faceUp: 0
+  selectable: 0
