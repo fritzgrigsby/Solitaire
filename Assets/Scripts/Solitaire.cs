@@ -15,12 +15,13 @@ public class Solitaire : MonoBehaviour
 
     [SerializeField] GameObject cardPrefab;
 
-    [SerializeField] GameObject[] topSlots;
+    [SerializeField] GameObject[] foundation;
     List<GameObject>[] topCards = new List<GameObject>[4].Select(item=>new List<GameObject>()).ToArray();
 
-    [SerializeField] GameObject[] bottomSlots;
+    [SerializeField] GameObject[] tableau;
     List<GameObject>[] bottomCards = new List<GameObject>[7].Select(item=>new List<GameObject>()).ToArray();
 
+    [SerializeField] GameObject[] hand;
     [SerializeField] GameObject deckButton;
 
     [SerializeField] int showNumCards = 3;
@@ -87,7 +88,7 @@ public class Solitaire : MonoBehaviour
                 yield return new WaitForSeconds(cardDealDelay);
 
                 // Get new position for card 
-                Vector3 new_position = bottomSlots[j].transform.position + new Vector3(0, -cardOffset_y * i, -cardOffset_z * i);
+                Vector3 new_position = tableau[j].transform.position + new Vector3(0, -cardOffset_y * i, -cardOffset_z * i);
 
                 // Get next card from deck 
                 GameObject next_card = deck.Last();
@@ -97,7 +98,7 @@ public class Solitaire : MonoBehaviour
                 //next_card.transform.position = new_position;
                 next_card.GetComponent<UpdateSprite>().SetMovePosition(new_position);
                 bottomCards[j].Add(next_card);
-                next_card.transform.SetParent(bottomSlots[j].transform);
+                next_card.transform.SetParent(tableau[j].transform);
 
                 // If its the last card, make it face up  TODO: Clean this up
                 if (i == j) { 
@@ -209,8 +210,8 @@ public class Solitaire : MonoBehaviour
                         // Add card to slot list
                         topCards[i].Add(card);
                         // Move card position to new one 
-                        card.GetComponent<UpdateSprite>().SetMovePosition(topSlots[i].transform.position + new Vector3(0,0,-cardOffset_z));
-                        card.transform.SetParent(topSlots[i].transform);
+                        card.GetComponent<UpdateSprite>().SetMovePosition(foundation[i].transform.position + new Vector3(0,0,-cardOffset_z));
+                        card.transform.SetParent(foundation[i].transform);
                         return;
                     }
                 }
@@ -228,9 +229,9 @@ public class Solitaire : MonoBehaviour
                         if(card_suit == suit && card_number == number + 1){
                             PurgeCard(card);
                             topCards[i].Add(card);
-                            //card.transform.position = topSlots[i].transform.position + new Vector3(0,0,-cardOffset_z * topCards[i].Count);
-                            card.GetComponent<UpdateSprite>().SetMovePosition(topSlots[i].transform.position + new Vector3(0,0,-cardOffset_z * topCards[i].Count));
-                            card.transform.SetParent(topSlots[i].transform);
+                            //card.transform.position = foundation[i].transform.position + new Vector3(0,0,-cardOffset_z * topCards[i].Count);
+                            card.GetComponent<UpdateSprite>().SetMovePosition(foundation[i].transform.position + new Vector3(0,0,-cardOffset_z * topCards[i].Count));
+                            card.transform.SetParent(foundation[i].transform);
                             return;
                         }
                     }
@@ -267,21 +268,21 @@ public class Solitaire : MonoBehaviour
 
                             // Move the cards
                             foreach(GameObject move_card in move_cards) {
-                                Vector3 new_position =  bottomSlots[i].transform.position + new Vector3(0, -cardOffset_y, -cardOffset_z) * bottomCards[i].Count;
+                                Vector3 new_position =  tableau[i].transform.position + new Vector3(0, -cardOffset_y, -cardOffset_z) * bottomCards[i].Count;
                                 PurgeCard(move_card);
                                 bottomCards[i].Add(move_card);
                                 //move_card.transform.position = new_position;
                                 move_card.GetComponent<UpdateSprite>().SetMovePosition(new_position);
-                                move_card.transform.SetParent(bottomSlots[i].transform);
+                                move_card.transform.SetParent(tableau[i].transform);
                             }
 
                         } else {
-                            Vector3 new_position =  bottomSlots[i].transform.position + new Vector3(0, -cardOffset_y, -cardOffset_z) * bottomCards[i].Count;
+                            Vector3 new_position =  tableau[i].transform.position + new Vector3(0, -cardOffset_y, -cardOffset_z) * bottomCards[i].Count;
                             PurgeCard(card);
                             bottomCards[i].Add(card);
                             //card.transform.position = new_position;
                             card.GetComponent<UpdateSprite>().SetMovePosition(new_position);
-                            card.transform.SetParent(bottomSlots[i].transform);
+                            card.transform.SetParent(tableau[i].transform);
                         }
 
                         return;
@@ -298,9 +299,9 @@ public class Solitaire : MonoBehaviour
                         // Add card to slot list
                         bottomCards[i].Add(card);
                         // Move card position to new one 
-                        //card.transform.position = bottomSlots[i].transform.position + new Vector3(0,0,cardOffset_z);
-                        card.GetComponent<UpdateSprite>().SetMovePosition(bottomSlots[i].transform.position + new Vector3(0,0,cardOffset_z));
-                        card.transform.SetParent(bottomSlots[i].transform);
+                        //card.transform.position = tableau[i].transform.position + new Vector3(0,0,cardOffset_z);
+                        card.GetComponent<UpdateSprite>().SetMovePosition(tableau[i].transform.position + new Vector3(0,0,cardOffset_z));
+                        card.transform.SetParent(tableau[i].transform);
                         return;
                     }
                 }
