@@ -12,23 +12,22 @@ using UnityEngine.UIElements;
 public class Solitaire : MonoBehaviour
 {
     [SerializeField] Sprite[] cardFaces;
-
     [SerializeField] GameObject cardPrefab;
-
-    [SerializeField] GameObject[] foundation;
-    List<GameObject>[] topCards = new List<GameObject>[4].Select(item=>new List<GameObject>()).ToArray();
-
-    [SerializeField] GameObject[] tableau;
-    List<GameObject>[] bottomCards = new List<GameObject>[7].Select(item=>new List<GameObject>()).ToArray();
-
-    [SerializeField] GameObject[] hand;
     [SerializeField] GameObject deckButton;
 
-    [SerializeField] int showNumCards = 3;
+    [Header("Card Slots")]
+    [SerializeField] GameObject[] foundation;
+    [SerializeField] GameObject[] tableau;
+    [SerializeField] GameObject[] hand;
+    enum HandSlots {STOCK, FAN, WASTE};
+    CardList fanList;
+    CardList wasteList;
+    //CardList stockList, fanList, wasteList;
 
-    [SerializeField] float cardOffset_x = 0.4f;
+    [Header("Card Settings")]
+    [SerializeField] int showNumCards = 3;
+    [SerializeField] float cardOffset_x = -0.4f;
     [SerializeField] float cardOffset_y = 0.2f;
-    [SerializeField] float cardOffset_z = 0.02f;
     [SerializeField] float cardDealDelay = 0.01f;
     
     string [] cards = new string [] {
@@ -38,73 +37,59 @@ public class Solitaire : MonoBehaviour
         "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9", "S10", "S11", "S12", "S13"
     };
 
-    List<GameObject> deck = new List<GameObject>(); 
-    List<GameObject> show = new List<GameObject>();
-    List<GameObject> discard = new List<GameObject>();
-
-    Vector3 startPositionOffset = new Vector3(0,0,0.2f);
-    Vector3 showPositionOffset = new Vector3(1.5f,0,0);
-
-    Vector3 startPosition = new Vector3();
-    Vector3 showPosition = new Vector3();
-
-    public void PrintCards() {
-        foreach(List<GameObject> l in bottomCards) {
-            string s = "";
-            foreach(GameObject g in l) {
-                s += g.name + " ";
-            }
-            Debug.Log(s);
-        }
-    }
+    RecordList recordList = new RecordList();
 
     void Start() {
+        fanList = hand[(int)HandSlots.FAN].GetComponent<CardList>();
+        wasteList = hand[(int)HandSlots.WASTE].GetComponent<CardList>();
+        InitCardSlots();
         GenerateDeck();
         StartCoroutine(DealCards());
     }
 
-    void Update() {
-        
+    void InitCardSlots() {
+        // Set hand slot offsets
+        hand[(int)HandSlots.FAN].GetComponent<CardList>().SetPlacementOffsets(cardOffset_x, 0);
+
+        // Set tableau slot offsets
+        foreach(var t in tableau) {
+            t.GetComponent<CardList>().SetPlacementOffsets(0, cardOffset_y);
+        }
     }
 
     // Add cards to deck and shuffel
     void GenerateDeck() {
-        startPosition = deckButton.transform.position + startPositionOffset;
-        showPosition = deckButton.transform.position + showPositionOffset;
+        var stock = hand[(int)HandSlots.STOCK].GetComponent<CardList>();
         foreach(string name in cards) {
-            GameObject new_card = Instantiate(cardPrefab, startPosition, Quaternion.identity, deckButton.transform);
+            GameObject new_card = Instantiate(cardPrefab, stock.transform.position, Quaternion.identity);
             new_card.name = name;
-            deck.Add(new_card);
+            stock.Push(new_card);
         }
-        Shuffel(deck);
+        stock.Shuffel();
     }
 
     IEnumerator DealCards() {
-        // Iterate over bottomCards in a triangle pattern
-        for(int i=0; i<bottomCards.Count(); ++i) {
-            for(int j=i; j<bottomCards.Count(); ++j) {
+        // Get card list from stock
+        var stock = hand[(int)HandSlots.STOCK].GetComponent<CardList>();
+
+        // Iterate over tableau in a triangle pattern
+        for(int i=0; i<tableau.Count(); ++i) {
+            for(int j=i; j<tableau.Count(); ++j) {
 
                 // Set delay
                 yield return new WaitForSeconds(cardDealDelay);
 
-                // Get new position for card 
-                Vector3 new_position = tableau[j].transform.position + new Vector3(0, -cardOffset_y * i, -cardOffset_z * i);
+                // Get next card from stock
+                GameObject next_card = stock.Pop();
 
-                // Get next card from deck 
-                GameObject next_card = deck.Last();
-                deck.Remove(next_card);
-
-                // Move card to new position and assign to array
-                //next_card.transform.position = new_position;
-                next_card.GetComponent<UpdateSprite>().SetMovePosition(new_position);
-                bottomCards[j].Add(next_card);
-                next_card.transform.SetParent(tableau[j].transform);
-
-                // If its the last card, make it face up  TODO: Clean this up
+                // If its the last card, make it face up and selectable
                 if (i == j) { 
                     next_card.GetComponent<Selectable>().faceUp = true;
                     next_card.GetComponent<Selectable>().selectable = true;
                 }
+
+                // Push next card to tabeleau
+                tableau[j].GetComponent<CardList>().Push(next_card);
             }
         }
     }
@@ -120,55 +105,53 @@ public class Solitaire : MonoBehaviour
     bool isEmptyDeck = false;
     IEnumerator ShowCards () {
 
+        // Get stock and fan
+        var stock = hand[(int)HandSlots.STOCK].GetComponent<CardList>();
+        var fan = hand[(int)HandSlots.FAN].GetComponent<CardList>();
+        var waste = hand[(int)HandSlots.WASTE].GetComponent<CardList>();
+
         // Remove any cards that are already showing 
-        foreach(GameObject s in show) {
-            discard.Add(s);
-            //s.transform.position = startPosition
-            s.GetComponent<UpdateSprite>().SetPostion(startPosition);
-            s.GetComponent<Selectable>().selectable = false;
-            s.GetComponent<Selectable>().faceUp = false;
+        recordList.Push(fan.Front(), fan, waste);
+        while(!fan.IsEmpty()) {
+            var card = fan.PopFront();
+            card.GetComponent<Selectable>().selectable = false;
+            card.GetComponent<Selectable>().faceUp = false;
+            card.SetActive(false);
+            waste.Push(card);
         }
-        show.Clear();
 
-        // Pull 'showNumCards' cards from deck and show them
+        // Pull 'showNumCards' cards from deck and add to fan 
+        if(!stock.IsEmpty()) { recordList.Push(stock.Top(), stock, fan); }
         for(int i=0;i<showNumCards;++i) {
-            if(deck.Count != 0) {
-                // Grab next card
-                Vector3 new_position = showPosition + new Vector3(cardOffset_x * i, 0, -cardOffset_z * i);
-                GameObject next_card = deck.Last();
 
-                // Remove it from deck and add to show 
-                deck.Remove(next_card);
-                show.Add(next_card);
+            if(!stock.IsEmpty()) {
 
-                // Move to new position
-                //next_card.transform.position = new_position;
-                next_card.GetComponent<UpdateSprite>().SetMovePosition(new_position);
-
-                // Turn face up
-                next_card.GetComponent<Selectable>().faceUp = true;
+                var card = stock.Pop();
+                card.GetComponent<Selectable>().faceUp = true;
 
                 // If its the top card set it as selectable 
-                if(deck.Count == 0 || i == showNumCards-1) {
-                    next_card.GetComponent<Selectable>().selectable = true;
+                if(stock.IsEmpty() || i == showNumCards-1) {
+                    card.GetComponent<Selectable>().selectable = true;
                 }
 
-                // Delay
+                fan.Push(card);
                 yield return new WaitForSeconds(cardDealDelay);
             }
         }
 
         // If deck is empty wait one round then pull the discard pile back 
         if(isEmptyDeck) {
-            discard.Reverse();
-            foreach(GameObject g in discard) {
-                deck.Add(g);
+
+            recordList.Push(waste.Top(), waste, stock);
+            while(!waste.IsEmpty()) {
+                var card = waste.Pop();
+                stock.Push(card);
+                card.SetActive(true);
             }
-            discard.Clear();
             isEmptyDeck = false;
         }
         
-        if(deck.Count == 0) {
+        if(stock.IsEmpty()) {
             isEmptyDeck = true;
         }
     }
@@ -178,182 +161,171 @@ public class Solitaire : MonoBehaviour
         return (s[0], int.Parse(s.Substring(1)));
     }
 
-    int GetBottomSlotIndex(GameObject card) {
-        // Return -1 if not in bottom slot and is not on top of deck
-        for(int i=0;i<bottomCards.Count();++i) {
-            for(int j=0; j<bottomCards[i].Count()-1; ++j){
-                if(bottomCards[i][j] == card){ return i; }
+    GameObject CheckTopOfTabelaeu(string card_name) {
+        foreach(var t in tableau) {
+            var list = t.GetComponent<CardList>();
+            if(!list.IsEmpty() && list.Top().name == card_name && list.Top().GetComponent<Selectable>().selectable) {
+                return t;
             }
         }
-        return -1;
+        return null;
     }
 
+    GameObject CheckTopOfFoundation(string card_name) {
+        foreach(var f in foundation) {
+            var list = f.GetComponent<CardList>();
+            if(!list.IsEmpty() && list.Top().name == card_name && list.Top().GetComponent<Selectable>().selectable) {
+                return f;
+            }
+        }
+        return null;
+    }
+
+    void Undo() {
+        var reverse = recordList.Pop();
+        // If from and to slots are the same, fip and make card unselectable 
+        if(reverse.fromSlot == reverse.toSlot) {
+            Debug.Log("Flip Card");
+            reverse.card.GetComponent<Selectable>().selectable = false;
+            reverse.card.GetComponent<Selectable>().faceUp = false;
+            return;
+        }
+
+        // Get list of cards to reverse
+        var pop_list = reverse.toSlot.PopFrom(reverse.card);
+
+        // If fromSlot is fanList, we need to reverse it, flip and make all cards unselectable 
+        if(reverse.toSlot == fanList) { 
+            Debug.Log("Is fan list");
+            pop_list.Reverse();
+            foreach(var p in pop_list) {
+                p.GetComponent<Selectable>().selectable = false;
+                p.GetComponent<Selectable>().faceUp = false;
+                reverse.fromSlot.Push(p);
+            }
+            // Run Undo again to pull back cards from waste
+            if(!wasteList.IsEmpty()) {
+                Undo();
+            }
+        }
+        // If from waste list we need to make cards active again
+        else if(reverse.toSlot == wasteList) {
+            foreach(var p in pop_list) {
+                p.SetActive(true);
+                p.GetComponent<Selectable>().faceUp = true;
+                reverse.fromSlot.Push(p);
+            }
+        }
+        // Default: Move cards back 
+        else {
+            foreach(var p in pop_list) {
+                reverse.fromSlot.Push(p);
+            }
+        }
+    }
+
+    // I know: card clicked, Card slot of card
+    // I need to know: (destination) if card can move to foundation, if card can move to tabelaeu
+    //                  If card is not on the top 
     void HandleCardClick(GameObject card) {
 
-        // Only process clicks on selectable cards 
+        if(card.name == "Undo") {
+            Debug.Log("Undo");
+            Undo();
+        }
+
+        if(!fanList.IsEmpty()) {
+            fanList.Top().GetComponent<Selectable>().selectable = true;
+        }
+
+        // Only move selectable cards
         if(card.GetComponent<Selectable>().selectable) {
-
-            // Get bottom slot index (if card is not in bottom slot then result will be -1)
-            int bottomSlotIndex = GetBottomSlotIndex(card);
-
-            // Get suit and number
             (char card_suit, int card_number) = GetSuitAndNumber(card.name);
+            GameObject  move_to_slot;
 
-            // Handle Aces 
+            // Special Case Ace
             if(card_number == 1) {
-                // Check top slots
-                for(int i=0;i<topCards.Count();++i) {
-                    // If we have an empty slot    
-                    if(topCards[i].Count == 0) {
-                        // Remove card from prev list
-                        PurgeCard(card);
-                        // Add card to slot list
-                        topCards[i].Add(card);
-                        // Move card position to new one 
-                        card.GetComponent<UpdateSprite>().SetMovePosition(foundation[i].transform.position + new Vector3(0,0,-cardOffset_z));
-                        card.transform.SetParent(foundation[i].transform);
+                foreach(var f in foundation) {
+                    var list = f.GetComponent<CardList>();
+                    if(list.IsEmpty()) {
+                        var card_parent_list = card.transform.parent.GetComponent<CardList>();
+                        card_parent_list.Pop();
+                        list.Push(card);
+                        recordList.Push(card, card_parent_list, list);
                         return;
                     }
                 }
-            } 
+            }
 
-            // Hande Remaining cards: check top slots
-            // Only check top slots if card is not buried in bottom slots
-            if(bottomSlotIndex == -1) {
-                Debug.Log("Card has children! Slot index: " + bottomSlotIndex);
-                for(int i=0;i<topCards.Count();++i) {
-                    // 
-                    if(topCards[i].Count != 0) {
-                        (char suit, int number) = GetSuitAndNumber(topCards[i].Last().name);
-                        // Check suit is same and card_number is one more 
-                        if(card_suit == suit && card_number == number + 1){
-                            PurgeCard(card);
-                            topCards[i].Add(card);
-                            //card.transform.position = foundation[i].transform.position + new Vector3(0,0,-cardOffset_z * topCards[i].Count);
-                            card.GetComponent<UpdateSprite>().SetMovePosition(foundation[i].transform.position + new Vector3(0,0,-cardOffset_z * topCards[i].Count));
-                            card.transform.SetParent(foundation[i].transform);
-                            return;
+            // Check Foundation
+            string find_card_foundation_name = card_suit + (card_number-1).ToString(); 
+            move_to_slot = CheckTopOfFoundation(find_card_foundation_name);
+            if(move_to_slot != null) {
+                var card_parent_list =  card.transform.parent.GetComponent<CardList>();
+                var pop_list = card_parent_list.PopFrom(card);
+                var move_to_list = move_to_slot.GetComponent<CardList>();
+                foreach(var p in pop_list) {
+                    move_to_list.Push(p);
+                }
+                recordList.Push(card, card_parent_list, move_to_list);
+                return;
+            }
+
+            // Check Tabelaeu
+            char tabeleau_suit1, tabeleau_suit2;
+            if(card_suit == 'H' || card_suit == 'D') {
+                tabeleau_suit1 = 'C'; tabeleau_suit2 = 'S';
+            } else {
+                tabeleau_suit1 = 'H'; tabeleau_suit2 = 'D';
+            }
+            string find_card_tabeleau_name1 = tabeleau_suit1 + (card_number+1).ToString(); 
+            string find_card_tabeleau_name2 = tabeleau_suit2 + (card_number+1).ToString(); 
+
+            move_to_slot = CheckTopOfTabelaeu(find_card_tabeleau_name1);
+            if(move_to_slot == null) {
+                move_to_slot = CheckTopOfTabelaeu(find_card_tabeleau_name2);
+            }
+            if(move_to_slot != null) {
+                var card_parent_list = card.transform.parent.GetComponent<CardList>();
+                var pop_list = card_parent_list.PopFrom(card);
+                var move_to_list = move_to_slot.GetComponent<CardList>();
+                foreach(var p in pop_list) {
+                    move_to_list.Push(p);
+                }
+                recordList.Push(card, card_parent_list, move_to_list);
+                return;
+            }
+
+
+            // Special Case King
+            if(card_number == 13) {
+                foreach(var t in tableau) {
+                    var list = t.GetComponent<CardList>();
+                    if(list.IsEmpty())  {
+                        var card_parent_list = card.transform.parent.GetComponent<CardList>();
+                        var pop_list = card.transform.parent.GetComponent<CardList>().PopFrom(card);
+                        foreach(var p in pop_list) {
+                            list.Push(p);
                         }
-                    }
-                }
-            }
-
-            // Handle Remaining cards: check bottom slots  
-            for(int i=0;i<bottomCards.Count();++i) {
-                if(bottomCards[i].Count !=0) {
-                    (char suit, int number) = GetSuitAndNumber(bottomCards[i].Last().name);
-                    // Check suit is oposite color and card_number is one less
-                    if(     (((card_suit == 'C' || card_suit == 'S') && (suit == 'H' || suit == 'D'))
-                            || ((card_suit == 'H' || card_suit == 'D') && (suit == 'C' || suit == 'S')))
-                            && (card_number == number-1)) {
-
-                        // log
-                        Debug.Log("card_number: " + card_number + " number: " + number);
-                        Debug.Log("card_suit: " + card_suit + " suit: " + suit);
-
-                        // Handle case when card has children
-                        if(bottomSlotIndex != -1) {
-                            bottomSlotIndex = Math.Abs(bottomSlotIndex);
-
-                            // Find the cards that need to be moved
-                            bool found = false;
-                            List<GameObject> move_cards = new List<GameObject>();
-                            foreach(GameObject check_card in bottomCards[bottomSlotIndex]) {
-                                if(found || check_card == card) { 
-                                    // Move object
-                                    move_cards.Add(check_card);
-                                    found = true;
-                                }
-                            }
-
-                            // Move the cards
-                            foreach(GameObject move_card in move_cards) {
-                                Vector3 new_position =  tableau[i].transform.position + new Vector3(0, -cardOffset_y, -cardOffset_z) * bottomCards[i].Count;
-                                PurgeCard(move_card);
-                                bottomCards[i].Add(move_card);
-                                //move_card.transform.position = new_position;
-                                move_card.GetComponent<UpdateSprite>().SetMovePosition(new_position);
-                                move_card.transform.SetParent(tableau[i].transform);
-                            }
-
-                        } else {
-                            Vector3 new_position =  tableau[i].transform.position + new Vector3(0, -cardOffset_y, -cardOffset_z) * bottomCards[i].Count;
-                            PurgeCard(card);
-                            bottomCards[i].Add(card);
-                            //card.transform.position = new_position;
-                            card.GetComponent<UpdateSprite>().SetMovePosition(new_position);
-                            card.transform.SetParent(tableau[i].transform);
-                        }
-
+                        recordList.Push(card, card_parent_list, list);
                         return;
+
                     }
                 }
+
             }
 
-            // Handle king posible move to blank space
-            if (card_number == 13) {
-                for(int i=0;i<bottomCards.Count();++i){
-                    if(bottomCards[i].Count == 0) {
-                        // Remove card from prev list
-                        PurgeCard(card);
-                        // Add card to slot list
-                        bottomCards[i].Add(card);
-                        // Move card position to new one 
-                        //card.transform.position = tableau[i].transform.position + new Vector3(0,0,cardOffset_z);
-                        card.GetComponent<UpdateSprite>().SetMovePosition(tableau[i].transform.position + new Vector3(0,0,cardOffset_z));
-                        card.transform.SetParent(tableau[i].transform);
-                        return;
-                    }
-                }
-                
-            }
-
-        }
-
-        // Handle clicks on face down cards
+        } 
+        // If card is not selectable and top of tabelaeu then fip it and make it selectable 
         else {
-            Debug.Log("Non selectable card: " + card.name);
-            for(int i=0;i<bottomCards.Count();++i) {
-                // If the card is on top then set it to be face up
-                if(bottomCards[i].Count() != 0 && bottomCards[i].Last() == card) {
-                    card.GetComponent<Selectable>().faceUp = true;
+            foreach(var t in tableau) {
+                var list = t.GetComponent<CardList>();
+                if(!list.IsEmpty() && list.Top().name == card.name) {
                     card.GetComponent<Selectable>().selectable = true;
-                    return;
+                    card.GetComponent<Selectable>().faceUp = true;
+                    recordList.Push(card, list, list);
                 }
             }
-        }
-    }
-
-    bool PurgeCard(GameObject card) {
-        // Clear from top cards
-        foreach(List<GameObject> list in topCards) {
-            if(list.Remove(card)) {
-                return true;
-            }
-        }
-        // Clear from bottom cards
-        foreach(List<GameObject> list in bottomCards) {
-            if(list.Remove(card)) {
-                return true;
-            }
-        }
-        // Clear from shown cards
-        for(int i=0;i<show.Count;++i){
-            if(card == show[i]){
-                if(i>0) { show[i-1].GetComponent<Selectable>().selectable = true; }
-                show.Remove(card);
-                return true;
-            }
-        }
-        // Return false if we did not find the card
-        return false;
-    }
-
-    void Shuffel<T>(List<T> list) {
-        System.Random random = new System.Random();
-        for(int i=0; i<list.Count; ++i) { 
-            int r = random.Next(0,list.Count);
-            (list[i], list[r]) = (list[r], list[i]);
         }
     }
 

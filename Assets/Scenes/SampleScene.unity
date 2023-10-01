@@ -536,6 +536,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1469086953}
     m_Modifications:
+    - target: {fileID: 3357052926537424958, guid: 068ce86f10496674aabb429e19741542, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6593522069937847821, guid: 068ce86f10496674aabb429e19741542, type: 3}
       propertyPath: m_LocalPosition.x
       value: 9
@@ -723,7 +727,7 @@ Transform:
   m_GameObject: {fileID: 1016823272}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -4, y: 2.3, z: 0}
+  m_LocalPosition: {x: -4, y: 2.3, z: -2}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -890,6 +894,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1469086953}
     m_Modifications:
+    - target: {fileID: 3357052926537424958, guid: 068ce86f10496674aabb429e19741542, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6593522069937847821, guid: 068ce86f10496674aabb429e19741542, type: 3}
       propertyPath: m_LocalPosition.x
       value: 1.5
@@ -956,6 +964,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1469086953}
     m_Modifications:
+    - target: {fileID: 3357052926537424958, guid: 068ce86f10496674aabb429e19741542, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6593522069937847821, guid: 068ce86f10496674aabb429e19741542, type: 3}
       propertyPath: m_LocalPosition.x
       value: 3
@@ -1022,6 +1034,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1469086953}
     m_Modifications:
+    - target: {fileID: 3357052926537424958, guid: 068ce86f10496674aabb429e19741542, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6593522069937847821, guid: 068ce86f10496674aabb429e19741542, type: 3}
       propertyPath: m_LocalPosition.x
       value: 6
@@ -1088,6 +1104,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1469086953}
     m_Modifications:
+    - target: {fileID: 3357052926537424958, guid: 068ce86f10496674aabb429e19741542, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6593522069937847821, guid: 068ce86f10496674aabb429e19741542, type: 3}
       propertyPath: m_LocalPosition.x
       value: 4.5
@@ -1302,6 +1322,7 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 770d08719b9e02f469722163fa61f93e, type: 3}
   - {fileID: 21300000, guid: f150734c35790a8428b4e865b7c3a3c2, type: 3}
   cardPrefab: {fileID: 3839812189252975949, guid: 5ebccefd968d1df4595349ea2f12019a, type: 3}
+  deckButton: {fileID: 1016823272}
   foundation:
   - {fileID: 2143808273}
   - {fileID: 1024054898}
@@ -1319,11 +1340,9 @@ MonoBehaviour:
   - {fileID: 1913760204}
   - {fileID: 35029371}
   - {fileID: 929492820}
-  deckButton: {fileID: 1016823272}
   showNumCards: 3
   cardOffset_x: 0.4
-  cardOffset_y: 0.25
-  cardOffset_z: 0.02
+  cardOffset_y: -0.25
   cardDealDelay: 0.05
 --- !u!114 &1577797436
 MonoBehaviour:
@@ -1355,6 +1374,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1469086953}
     m_Modifications:
+    - target: {fileID: 3357052926537424958, guid: 068ce86f10496674aabb429e19741542, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6593522069937847821, guid: 068ce86f10496674aabb429e19741542, type: 3}
       propertyPath: m_LocalPosition.x
       value: 7.5
@@ -1487,6 +1510,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1469086953}
     m_Modifications:
+    - target: {fileID: 3357052926537424958, guid: 068ce86f10496674aabb429e19741542, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6593522069937847821, guid: 068ce86f10496674aabb429e19741542, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
