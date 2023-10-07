@@ -11,6 +11,7 @@ using UnityEngine.UIElements;
 
 public class Solitaire : MonoBehaviour
 {
+    [Header("Card Data")]
     [SerializeField] Sprite[] cardFaces;
     [SerializeField] GameObject cardPrefab;
     [SerializeField] GameObject deckButton;
@@ -19,10 +20,9 @@ public class Solitaire : MonoBehaviour
     [SerializeField] GameObject[] foundation;
     [SerializeField] GameObject[] tableau;
     [SerializeField] GameObject[] hand;
-    enum HandSlots {STOCK, FAN, WASTE};
-    CardList fanList;
-    CardList wasteList;
-    //CardList stockList, fanList, wasteList;
+    CardList[] foundationLists;
+    CardList[] tableauLists;
+    CardList stockList, fanList, wasteList;
 
     [Header("Card Settings")]
     [SerializeField] int showNumCards = 3;
@@ -30,26 +30,42 @@ public class Solitaire : MonoBehaviour
     [SerializeField] float cardOffset_y = 0.2f;
     [SerializeField] float cardDealDelay = 0.01f;
     
-    string [] cards = new string [] {
+    string [] cardNames = new string [] {
         "C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10", "C11", "C12", "C13",
         "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10", "D11", "D12", "D13",
         "H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8", "H9", "H10", "H11", "H12", "H13",
         "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9", "S10", "S11", "S12", "S13"
     };
 
+    // Record List for tracking moves to enable undo 
     RecordList recordList = new RecordList();
 
     void Start() {
-        fanList = hand[(int)HandSlots.FAN].GetComponent<CardList>();
-        wasteList = hand[(int)HandSlots.WASTE].GetComponent<CardList>();
         InitCardSlots();
         GenerateDeck();
         StartCoroutine(DealCards());
     }
 
     void InitCardSlots() {
+        // Cash hand card lists
+        stockList = hand[0].GetComponent<CardList>();
+        fanList = hand[1].GetComponent<CardList>();
+        wasteList = hand[2].GetComponent<CardList>();
+
+        // Cash foundation card lists
+        foundationLists = new CardList[foundation.Count()];
+        for(int i=0; i<foundation.Count(); ++i) {
+            foundationLists[i] = foundation[i].GetComponent<CardList>();
+        }
+
+        // Cash tableau card lists
+        tableauLists = new CardList[tableau.Count()];
+        for(int i=0; i<tableau.Count(); ++i) {
+            tableauLists[i] = tableau[i].GetComponent<CardList>();
+        }
+
         // Set hand slot offsets
-        hand[(int)HandSlots.FAN].GetComponent<CardList>().SetPlacementOffsets(cardOffset_x, 0);
+        fanList.SetPlacementOffsets(cardOffset_x, 0);
 
         // Set tableau slot offsets
         foreach(var t in tableau) {
@@ -59,18 +75,16 @@ public class Solitaire : MonoBehaviour
 
     // Add cards to deck and shuffel
     void GenerateDeck() {
-        var stock = hand[(int)HandSlots.STOCK].GetComponent<CardList>();
-        foreach(string name in cards) {
-            GameObject new_card = Instantiate(cardPrefab, stock.transform.position, Quaternion.identity);
-            new_card.name = name;
-            stock.Push(new_card);
+        for(int i=0; i<cardNames.Count(); ++i) {
+            GameObject new_card = Instantiate(cardPrefab, stockList.transform.position, Quaternion.identity);
+            new_card.name = cardNames[i];
+            new_card.GetComponent<UpdateSprite>().SetCardFront(cardFaces[i]);
+            stockList.Push(new_card);
         }
-        stock.Shuffel();
+        stockList.Shuffel();
     }
 
     IEnumerator DealCards() {
-        // Get card list from stock
-        var stock = hand[(int)HandSlots.STOCK].GetComponent<CardList>();
 
         // Iterate over tableau in a triangle pattern
         for(int i=0; i<tableau.Count(); ++i) {
@@ -80,7 +94,7 @@ public class Solitaire : MonoBehaviour
                 yield return new WaitForSeconds(cardDealDelay);
 
                 // Get next card from stock
-                GameObject next_card = stock.Pop();
+                GameObject next_card = stockList.Pop();
 
                 // If its the last card, make it face up and selectable
                 if (i == j) { 
@@ -105,36 +119,31 @@ public class Solitaire : MonoBehaviour
     bool isEmptyDeck = false;
     IEnumerator ShowCards () {
 
-        // Get stock and fan
-        var stock = hand[(int)HandSlots.STOCK].GetComponent<CardList>();
-        var fan = hand[(int)HandSlots.FAN].GetComponent<CardList>();
-        var waste = hand[(int)HandSlots.WASTE].GetComponent<CardList>();
-
         // Remove any cards that are already showing 
-        recordList.Push(fan.Front(), fan, waste);
-        while(!fan.IsEmpty()) {
-            var card = fan.PopFront();
+        recordList.Push(fanList.Front(), fanList, wasteList);
+        while(!fanList.IsEmpty()) {
+            var card = fanList.PopFront();
             card.GetComponent<Selectable>().selectable = false;
             card.GetComponent<Selectable>().faceUp = false;
             card.SetActive(false);
-            waste.Push(card);
+            wasteList.Push(card);
         }
 
         // Pull 'showNumCards' cards from deck and add to fan 
-        if(!stock.IsEmpty()) { recordList.Push(stock.Top(), stock, fan); }
+        if(!stockList.IsEmpty()) { recordList.Push(stockList.Top(), stockList, fanList); }
         for(int i=0;i<showNumCards;++i) {
 
-            if(!stock.IsEmpty()) {
+            if(!stockList.IsEmpty()) {
 
-                var card = stock.Pop();
+                var card = stockList.Pop();
                 card.GetComponent<Selectable>().faceUp = true;
 
                 // If its the top card set it as selectable 
-                if(stock.IsEmpty() || i == showNumCards-1) {
+                if(stockList.IsEmpty() || i == showNumCards-1) {
                     card.GetComponent<Selectable>().selectable = true;
                 }
 
-                fan.Push(card);
+                fanList.Push(card);
                 yield return new WaitForSeconds(cardDealDelay);
             }
         }
@@ -142,16 +151,16 @@ public class Solitaire : MonoBehaviour
         // If deck is empty wait one round then pull the discard pile back 
         if(isEmptyDeck) {
 
-            recordList.Push(waste.Top(), waste, stock);
-            while(!waste.IsEmpty()) {
-                var card = waste.Pop();
-                stock.Push(card);
+            recordList.Push(wasteList.Top(), wasteList, stockList);
+            while(!wasteList.IsEmpty()) {
+                var card = wasteList.Pop();
+                stockList.Push(card);
                 card.SetActive(true);
             }
             isEmptyDeck = false;
         }
         
-        if(stock.IsEmpty()) {
+        if(stockList.IsEmpty()) {
             isEmptyDeck = true;
         }
     }
@@ -161,31 +170,28 @@ public class Solitaire : MonoBehaviour
         return (s[0], int.Parse(s.Substring(1)));
     }
 
-    GameObject CheckTopOfTabelaeu(string card_name) {
-        foreach(var t in tableau) {
-            var list = t.GetComponent<CardList>();
-            if(!list.IsEmpty() && list.Top().name == card_name && list.Top().GetComponent<Selectable>().selectable) {
+    CardList CheckTopOfTabelaeu(string card_name) {
+        foreach(var t in tableauLists) {
+            if(!t.IsEmpty() && t.Top().name == card_name && t.Top().GetComponent<Selectable>().selectable) {
                 return t;
             }
         }
         return null;
     }
 
-    GameObject CheckTopOfFoundation(string card_name) {
-        foreach(var f in foundation) {
-            var list = f.GetComponent<CardList>();
-            if(!list.IsEmpty() && list.Top().name == card_name && list.Top().GetComponent<Selectable>().selectable) {
+    CardList CheckTopOfFoundation(string card_name) {
+        foreach(var f in foundationLists) {
+            if(!f.IsEmpty() && f.Top().name == card_name && f.Top().GetComponent<Selectable>().selectable) {
                 return f;
             }
         }
         return null;
     }
 
-    void Undo() {
+    public void Undo() {
         var reverse = recordList.Pop();
         // If from and to slots are the same, fip and make card unselectable 
         if(reverse.fromSlot == reverse.toSlot) {
-            Debug.Log("Flip Card");
             reverse.card.GetComponent<Selectable>().selectable = false;
             reverse.card.GetComponent<Selectable>().faceUp = false;
             return;
@@ -196,7 +202,6 @@ public class Solitaire : MonoBehaviour
 
         // If fromSlot is fanList, we need to reverse it, flip and make all cards unselectable 
         if(reverse.toSlot == fanList) { 
-            Debug.Log("Is fan list");
             pop_list.Reverse();
             foreach(var p in pop_list) {
                 p.GetComponent<Selectable>().selectable = false;
@@ -224,16 +229,9 @@ public class Solitaire : MonoBehaviour
         }
     }
 
-    // I know: card clicked, Card slot of card
-    // I need to know: (destination) if card can move to foundation, if card can move to tabelaeu
-    //                  If card is not on the top 
     void HandleCardClick(GameObject card) {
 
-        if(card.name == "Undo") {
-            Debug.Log("Undo");
-            Undo();
-        }
-
+        // Make sure the top of fan is selectable 
         if(!fanList.IsEmpty()) {
             fanList.Top().GetComponent<Selectable>().selectable = true;
         }
@@ -241,7 +239,7 @@ public class Solitaire : MonoBehaviour
         // Only move selectable cards
         if(card.GetComponent<Selectable>().selectable) {
             (char card_suit, int card_number) = GetSuitAndNumber(card.name);
-            GameObject  move_to_slot;
+            CardList move_to_list;
 
             // Special Case Ace
             if(card_number == 1) {
@@ -259,16 +257,15 @@ public class Solitaire : MonoBehaviour
 
             // Check Foundation
             string find_card_foundation_name = card_suit + (card_number-1).ToString(); 
-            move_to_slot = CheckTopOfFoundation(find_card_foundation_name);
-            if(move_to_slot != null) {
+            move_to_list = CheckTopOfFoundation(find_card_foundation_name);
+            if(move_to_list != null) {
                 var card_parent_list =  card.transform.parent.GetComponent<CardList>();
-                var pop_list = card_parent_list.PopFrom(card);
-                var move_to_list = move_to_slot.GetComponent<CardList>();
-                foreach(var p in pop_list) {
-                    move_to_list.Push(p);
+                if(card_parent_list.Top().name == card.name) {
+                    card_parent_list.Pop();
+                    move_to_list.Push(card);
+                    recordList.Push(card, card_parent_list, move_to_list);
+                    return;
                 }
-                recordList.Push(card, card_parent_list, move_to_list);
-                return;
             }
 
             // Check Tabelaeu
@@ -281,14 +278,13 @@ public class Solitaire : MonoBehaviour
             string find_card_tabeleau_name1 = tabeleau_suit1 + (card_number+1).ToString(); 
             string find_card_tabeleau_name2 = tabeleau_suit2 + (card_number+1).ToString(); 
 
-            move_to_slot = CheckTopOfTabelaeu(find_card_tabeleau_name1);
-            if(move_to_slot == null) {
-                move_to_slot = CheckTopOfTabelaeu(find_card_tabeleau_name2);
+            move_to_list = CheckTopOfTabelaeu(find_card_tabeleau_name1);
+            if(move_to_list == null) {
+                move_to_list = CheckTopOfTabelaeu(find_card_tabeleau_name2);
             }
-            if(move_to_slot != null) {
+            if(move_to_list != null) {
                 var card_parent_list = card.transform.parent.GetComponent<CardList>();
                 var pop_list = card_parent_list.PopFrom(card);
-                var move_to_list = move_to_slot.GetComponent<CardList>();
                 foreach(var p in pop_list) {
                     move_to_list.Push(p);
                 }
@@ -296,14 +292,13 @@ public class Solitaire : MonoBehaviour
                 return;
             }
 
-
-            // Special Case King
+            // Special Case: King
             if(card_number == 13) {
                 foreach(var t in tableau) {
                     var list = t.GetComponent<CardList>();
                     if(list.IsEmpty())  {
                         var card_parent_list = card.transform.parent.GetComponent<CardList>();
-                        var pop_list = card.transform.parent.GetComponent<CardList>().PopFrom(card);
+                        var pop_list = card_parent_list.PopFrom(card);
                         foreach(var p in pop_list) {
                             list.Push(p);
                         }
@@ -316,6 +311,7 @@ public class Solitaire : MonoBehaviour
             }
 
         } 
+
         // If card is not selectable and top of tabelaeu then fip it and make it selectable 
         else {
             foreach(var t in tableau) {
@@ -327,23 +323,5 @@ public class Solitaire : MonoBehaviour
                 }
             }
         }
-    }
-
-    int GetCardIndex(string card_name) {
-        for(int i=0; i<cards.Count(); ++i) {
-            if(card_name == cards[i]) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    public Sprite GetCardFace(string card_name) {
-        int index = GetCardIndex(card_name);
-        if(index < 0) { 
-            Debug.Log("Error! " + card_name + "not recognized as card name");
-            return null; 
-        }
-        return cardFaces[index];
     }
 }

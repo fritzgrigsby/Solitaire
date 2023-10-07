@@ -27,13 +27,16 @@ public class UpdateSprite : MonoBehaviour
         transform.position = position;
     }
 
+    public void SetCardFront(Sprite front) {
+        cardFront = front;
+    }
+
     void Awake() {
         spriteRenderer = GetComponent<SpriteRenderer>();
         selectable = GetComponent<Selectable>();
     }
 
     void Start() {
-        cardFront = FindObjectOfType<Solitaire>().GetCardFace(gameObject.name);
         targetPosition = gameObject.transform.position;
     }
 
