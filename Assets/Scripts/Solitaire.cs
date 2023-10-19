@@ -188,7 +188,17 @@ public class Solitaire : MonoBehaviour
         return null;
     }
 
+    public void UndoAll() {
+        while(!recordList.IsEmpty()) {
+            Undo();
+        }
+    }
+
     public void Undo() {
+        if(recordList.IsEmpty()) {
+            //TODO: Add warning message?
+            return;
+        }
         var reverse = recordList.Pop();
         // If from and to slots are the same, fip and make card unselectable 
         if(reverse.fromSlot == reverse.toSlot) {
