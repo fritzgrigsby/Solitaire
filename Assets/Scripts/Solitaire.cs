@@ -333,8 +333,12 @@ public class Solitaire : MonoBehaviour
                     card.GetComponent<Selectable>().selectable = true;
                     card.GetComponent<Selectable>().faceUp = true;
                     recordList.Push(card, list, list);
+                    return;
                 }
             }
         }
+
+        // If we made it here the card has no moves, so we shake it 
+        card.GetComponent<UpdateSprite>().SetShake();
     }
 }
