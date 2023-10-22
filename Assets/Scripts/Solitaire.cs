@@ -1,13 +1,6 @@
-using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Linq;
-using Unity.VisualScripting;
-using Unity.VisualScripting.Dependencies.Sqlite;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 public class Solitaire : MonoBehaviour
 {
@@ -38,7 +31,7 @@ public class Solitaire : MonoBehaviour
     };
 
     // Record List for tracking moves to enable undo 
-    RecordList recordList = new RecordList();
+    public RecordList recordList = new RecordList();
 
     void Start() {
         InitCardSlots();
@@ -120,7 +113,7 @@ public class Solitaire : MonoBehaviour
     IEnumerator ShowCards () {
 
         // Remove any cards that are already showing 
-        recordList.Push(fanList.Front(), fanList, wasteList);
+        if(!fanList.IsEmpty()) { recordList.Push(fanList.Front(), fanList, wasteList); }
         while(!fanList.IsEmpty()) {
             var card = fanList.PopFront();
             card.GetComponent<Selectable>().selectable = false;
@@ -200,6 +193,7 @@ public class Solitaire : MonoBehaviour
             return;
         }
         var reverse = recordList.Pop();
+
         // If from and to slots are the same, fip and make card unselectable 
         if(reverse.fromSlot == reverse.toSlot) {
             reverse.card.GetComponent<Selectable>().selectable = false;
@@ -229,6 +223,15 @@ public class Solitaire : MonoBehaviour
                 p.SetActive(true);
                 p.GetComponent<Selectable>().faceUp = true;
                 reverse.fromSlot.Push(p);
+            }
+        }
+        // If from stock list we need to make cards inactive and flip the waste list
+        else if(reverse.toSlot == stockList) {
+            while(pop_list.Count() != 0) {
+                var p = pop_list.Last();
+                p.SetActive(false);
+                reverse.fromSlot.Push(p);
+                pop_list.RemoveAt(pop_list.Count - 1);
             }
         }
         // Default: Move cards back 

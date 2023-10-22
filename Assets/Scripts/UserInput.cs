@@ -1,6 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEditor;
 using UnityEngine;
 
 public class UserInput : MonoBehaviour
@@ -28,7 +25,6 @@ public class UserInput : MonoBehaviour
                 if (hit.collider.CompareTag("Card")) {
                     CardClick(hit.collider.gameObject);
                 }
-                //solitaire.PrintCards();
             }
         }
     }
@@ -39,6 +35,5 @@ public class UserInput : MonoBehaviour
 
     void CardClick(GameObject selected) {
         solitaire.CardClick(selected);
-        Debug.Log("Card click!");
     }
 }
