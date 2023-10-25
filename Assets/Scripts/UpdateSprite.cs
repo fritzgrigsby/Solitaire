@@ -43,6 +43,10 @@ public class UpdateSprite : MonoBehaviour
         cardFront = front;
     }
 
+    public void SetCardback(Sprite back) {
+        cardBack = back;
+    }
+
     public void SetMovePosition(Vector3 target_position) {
         targetPosition = target_position;
     }

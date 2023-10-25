@@ -182,12 +182,14 @@ public class Solitaire : MonoBehaviour
     }
 
     public void UndoAll() {
+        if(SettingsMenu.menuOpen) { return; }
         while(!recordList.IsEmpty()) {
             Undo();
         }
     }
 
     public void Undo() {
+        if(SettingsMenu.menuOpen) { return; }
         if(recordList.IsEmpty()) {
             //TODO: Add warning message?
             return;
