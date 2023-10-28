@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Linq;
+using Unity.Mathematics;
 using UnityEngine;
 
 public class Solitaire : MonoBehaviour
@@ -8,6 +9,7 @@ public class Solitaire : MonoBehaviour
     [SerializeField] Sprite[] cardFaces;
     [SerializeField] GameObject cardPrefab;
     [SerializeField] GameObject deckButton;
+    [SerializeField] Sprite cardGlow;
 
     [Header("Card Slots")]
     [SerializeField] GameObject[] foundation;
@@ -179,6 +181,12 @@ public class Solitaire : MonoBehaviour
             }
         }
         return null;
+    }
+
+    public void GetHint() {
+        // Iterate over Tabelu and see if we have any move options
+        GameObject found = tableauLists[0].Top();
+        Instantiate(cardGlow,Vector3.zero, quaternion.identity, found.transform);
     }
 
     public void UndoAll() {
