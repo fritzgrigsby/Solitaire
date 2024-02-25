@@ -5,7 +5,7 @@ using UnityEngine.UI;
 public class SettingsMenu : MonoBehaviour
 {
     // Globally accessable bool 
-    public static bool menuOpen;
+    public static bool menuOpen = false;
 
     [Header("Card Back Buttons")]
     [SerializeField] List<CardButton_SO> cardButton_SOs;
@@ -14,8 +14,6 @@ public class SettingsMenu : MonoBehaviour
 
     void Start() {
         InitCardBackButtons();
-        gameObject.SetActive(false);
-        menuOpen = false;
     }
 
     void InitCardBackButtons() {
