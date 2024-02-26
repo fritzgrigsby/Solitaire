@@ -1,6 +1,10 @@
 using System.Collections;
 using System.Linq;
+using System.Threading.Tasks;
 using Unity.Mathematics;
+using Unity.VisualScripting.Dependencies.Sqlite;
+using UnityEditor;
+using UnityEditor.XR;
 using UnityEngine;
 
 public class Solitaire : MonoBehaviour
@@ -9,7 +13,8 @@ public class Solitaire : MonoBehaviour
     [SerializeField] Sprite[] cardFaces;
     [SerializeField] GameObject cardPrefab;
     [SerializeField] GameObject deckButton;
-    [SerializeField] Sprite cardGlow;
+    [SerializeField] GameObject cardGlow;
+    [SerializeField] GameObject cardGlowOpen;
 
     [Header("Card Slots")]
     [SerializeField] GameObject[] foundation;
@@ -34,6 +39,8 @@ public class Solitaire : MonoBehaviour
 
     // Record List for tracking moves to enable undo 
     public RecordList recordList = new RecordList();
+
+    GameObject hintHilight = null;
 
     void Start() {
         InitCardSlots();
@@ -108,11 +115,18 @@ public class Solitaire : MonoBehaviour
     }
 
     public void CardClick(GameObject card) {
+
+        // Delete hilight if it exists
+        if(hintHilight != null){ Destroy(hintHilight); }
+        
         HandleCardClick(card);
     }
 
     bool isEmptyDeck = false;
     IEnumerator ShowCards () {
+
+        // Delete hilight if it exists
+        if(hintHilight != null){ Destroy(hintHilight); }
 
         // Remove any cards that are already showing 
         if(!fanList.IsEmpty()) { recordList.Push(fanList.Front(), fanList, wasteList); }
@@ -184,9 +198,137 @@ public class Solitaire : MonoBehaviour
     }
 
     public void GetHint() {
-        // Iterate over Tabelu and see if we have any move options
-        GameObject found = tableauLists[0].Top();
-        Instantiate(cardGlow,Vector3.zero, quaternion.identity, found.transform);
+
+        // Delete hilight if it exists
+        if(hintHilight != null){ Destroy(hintHilight); }
+
+        // Iterate over Tabelu and compare to Foundations
+        foreach(var t in tableauLists){
+            GameObject card = t.Top();
+            if(card != null && card.GetComponent<Selectable>().selectable){
+                (char card_suit, int card_number) = GetSuitAndNumber(card.name);
+
+                // Check Foundation
+                string find_card_foundation_name = card_suit + (card_number-1).ToString(); 
+                var move_to_list = CheckTopOfFoundation(find_card_foundation_name);
+                if(move_to_list != null) {
+                    var card_parent_list =  card.transform.parent.GetComponent<CardList>();
+                    if(card_parent_list.Top().name == card.name) {
+                        ApplyGlow(card);
+                        return;
+                    }
+                }
+            }
+        }
+
+        // Iterate over Tabelu and grab first selectable to compare to top of remaining Tabelu's
+        foreach(var t in tableauLists) {
+            GameObject card = t.FirstSelectable();
+            bool is_top_card = (card == t.Top());
+
+            if(card != null) {
+                (char card_suit, int card_number) = GetSuitAndNumber(card.name);
+
+                // Special Case: A
+                if(card_number == 1) {
+                    ApplyGlow(card, !is_top_card);
+                    return;
+                }
+
+                // Special Cases: K 
+                if(card_number == 13 && t.Front() != card){
+                    foreach(var tt in tableauLists) {
+                        if(tt.IsEmpty()) {
+                            ApplyGlow(card, !is_top_card);
+                            return;
+                        }
+                    }
+                }
+
+                // Check Tabelaeu
+                char tabeleau_suit1, tabeleau_suit2;
+                if(card_suit == 'H' || card_suit == 'D') {
+                    tabeleau_suit1 = 'C'; tabeleau_suit2 = 'S';
+                } else {
+                    tabeleau_suit1 = 'H'; tabeleau_suit2 = 'D';
+                }
+                string find_card_tabeleau_name1 = tabeleau_suit1 + (card_number+1).ToString(); 
+                string find_card_tabeleau_name2 = tabeleau_suit2 + (card_number+1).ToString(); 
+
+                CardList move_to_list;
+                move_to_list = CheckTopOfTabelaeu(find_card_tabeleau_name1);
+                if(move_to_list == null) {
+                    move_to_list = CheckTopOfTabelaeu(find_card_tabeleau_name2);
+                }
+                if(move_to_list != null) {
+                    ApplyGlow(card, !is_top_card);
+                    return;
+                }
+            }
+        }
+
+        // Check top of Fan 
+        GameObject fan_card = fanList.Top();
+        if(fan_card != null) {
+            (char card_suit, int card_number) = GetSuitAndNumber(fan_card.name);
+
+            // Special Case: A
+            if(card_number == 1) {
+                ApplyGlow(fan_card);
+                return;
+            }
+
+            // Special Cases: K 
+            if(card_number == 13){
+                foreach(var tt in tableauLists) {
+                    if(tt.IsEmpty()) {
+                        ApplyGlow(fan_card);
+                        return;
+                    }
+                }
+            }
+
+            // Check Tabelaeu
+            char tabeleau_suit1, tabeleau_suit2;
+            if(card_suit == 'H' || card_suit == 'D') {
+                tabeleau_suit1 = 'C'; tabeleau_suit2 = 'S';
+            } else {
+                tabeleau_suit1 = 'H'; tabeleau_suit2 = 'D';
+            }
+            string find_card_tabeleau_name1 = tabeleau_suit1 + (card_number+1).ToString(); 
+            string find_card_tabeleau_name2 = tabeleau_suit2 + (card_number+1).ToString(); 
+
+            CardList move_to_list;
+            move_to_list = CheckTopOfTabelaeu(find_card_tabeleau_name1);
+            if(move_to_list == null) {
+                move_to_list = CheckTopOfTabelaeu(find_card_tabeleau_name2);
+            }
+            if(move_to_list != null) {
+                ApplyGlow(fan_card);
+                return;
+            }
+
+            // Check Foundation
+            string find_card_foundation_name = card_suit + (card_number-1).ToString(); 
+            move_to_list = CheckTopOfFoundation(find_card_foundation_name);
+            if(move_to_list != null) {
+                var card_parent_list =  fan_card.transform.parent.GetComponent<CardList>();
+                if(card_parent_list.Top().name == fan_card.name) {
+                    ApplyGlow(fan_card);
+                    return;
+                }
+            }
+        }
+
+        // If no other hints are found, default to deck button
+        ApplyGlow(hand[0]);
+    }
+
+    void ApplyGlow(GameObject card, bool open_bottom = false) {
+        // Apply glow to movable card
+        if(hintHilight) { Destroy(hintHilight); }
+        Vector3 pos = card.transform.position + new Vector3(0,0,-1);
+        hintHilight = Instantiate(open_bottom ? cardGlowOpen : cardGlow, pos, quaternion.identity);
     }
 
     public void UndoAll() {
@@ -255,7 +397,7 @@ public class Solitaire : MonoBehaviour
     void HandleCardClick(GameObject card) {
 
         // Make sure the top of fan is selectable 
-        if(!fanList.IsEmpty()) {
+        if(!fanList.IsEmpty() && !fanList.Top().GetComponent<Selectable>().selectable) {
             fanList.Top().GetComponent<Selectable>().selectable = true;
         }
 
@@ -332,6 +474,8 @@ public class Solitaire : MonoBehaviour
                 }
 
             }
+            // If we made it here the card has no moves, so we shake it 
+            card.GetComponent<UpdateSprite>().SetShake();
 
         } 
 
@@ -348,7 +492,5 @@ public class Solitaire : MonoBehaviour
             }
         }
 
-        // If we made it here the card has no moves, so we shake it 
-        card.GetComponent<UpdateSprite>().SetShake();
     }
 }

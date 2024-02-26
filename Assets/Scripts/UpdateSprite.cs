@@ -78,7 +78,7 @@ public class UpdateSprite : MonoBehaviour
 
     void Shake() {
         if(shaking) {
-            Vector3 new_pos = Random.insideUnitSphere * Time.deltaTime * shakeAmount;
+            Vector3 new_pos = Random.insideUnitSphere * shakeAmount;
             new_pos.y = 0;
             new_pos.z = 0;
             transform.position = targetPosition + new_pos;

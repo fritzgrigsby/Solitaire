@@ -175,7 +175,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   speed: 50
   moveHeight: 2
-  shakeAmount: 15
+  shakeAmount: 0.2
   shakeLength: 0.25
   cardBack: {fileID: 21300000, guid: 11e552d605d713a40bf2ff76804e6d33, type: 3}
 --- !u!114 &8079911533120120215

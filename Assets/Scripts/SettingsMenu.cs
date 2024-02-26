@@ -43,7 +43,7 @@ public class SettingsMenu : MonoBehaviour
     }
 
     void SetCardBacks(Sprite sprite) {
-        var list = FindObjectsOfType<UpdateSprite>();
+        var list = FindObjectsOfType<UpdateSprite>(true);
         foreach(var s in list) {
             s.SetCardback(sprite);
         }
